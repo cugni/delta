@@ -18,148 +18,153 @@ package org.apache.spark.sql.delta.sources
 
 // scalastyle:off import.ordering.noEmptyLine
 import java.util.concurrent.TimeUnit
-
-import org.apache.spark.internal.config.ConfigBuilder
+import org.apache.spark.internal.config.{ConfigBuilder, ConfigEntry}
 import org.apache.spark.sql.internal.SQLConf
 
 /**
  * [[SQLConf]] entries for Delta features.
  */
 trait DeltaSQLConfBase {
+
+  def getOrBuild[T](key: String, builder: (ConfigBuilder => ConfigEntry[T])): ConfigEntry[T] = {
+    Option(ConfigEntry.findEntry(s"spark.databricks.delta.$key").asInstanceOf[ConfigEntry[T]])
+      .getOrElse(builder(SQLConf.buildConf(key)))
+
+  }
   def buildConf(key: String): ConfigBuilder = SQLConf.buildConf(s"spark.databricks.delta.$key")
   def buildStaticConf(key: String): ConfigBuilder =
     SQLConf.buildStaticConf(s"spark.databricks.delta.$key")
 
   val RESOLVE_TIME_TRAVEL_ON_IDENTIFIER =
-    buildConf("timeTravel.resolveOnIdentifier.enabled")
+    getOrBuild("timeTravel.resolveOnIdentifier.enabled", _
       .internal()
       .doc("When true, we will try to resolve patterns as `@v123` in identifiers as time " +
         "travel nodes.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_COMMIT_INFO_ENABLED =
-    buildConf("commitInfo.enabled")
+     getOrBuild("commitInfo.enabled", _
       .doc("Whether to log commit information into the Delta log.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_COMMIT_LOCK_ENABLED =
-    buildConf("commitLock.enabled")
+     getOrBuild("commitLock.enabled", _
       .internal()
       .doc("Whether to lock a Delta table when doing a commit.")
       .booleanConf
-      .createOptional
+      .createOptional)
 
   val DELTA_COLLECT_STATS =
-    buildConf("stats.collect")
+     getOrBuild("stats.collect", _
       .internal()
       .doc("When true, statistics are collected while writing files into a Delta table.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_USER_METADATA =
-    buildConf("commitInfo.userMetadata")
+     getOrBuild("commitInfo.userMetadata", _
       .doc("Arbitrary user-defined metadata to include in CommitInfo. Requires commitInfo.enabled.")
       .stringConf
-      .createOptional
+      .createOptional)
 
   val DELTA_CONVERT_USE_METADATA_LOG =
-    buildConf("convert.useMetadataLog")
+     getOrBuild("convert.useMetadataLog", _
       .doc(
         """ When converting to a Parquet table that was created by Structured Streaming, whether
         |  to use the transaction log under `_spark_metadata` as the source of truth for files
         | contained in the table.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_CONVERT_USE_CATALOG_PARTITIONS =
-    buildConf("convert.useCatalogPartitions")
+    getOrBuild("convert.useCatalogPartitions", _
       .internal()
       .doc(
         """ When converting a catalog Parquet table, whether to use the partition information from
           | the Metastore catalog and only commit files under the directories of active partitions.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_CONVERT_USE_CATALOG_SCHEMA =
-    buildConf("convert.useCatalogSchema")
+    getOrBuild("convert.useCatalogSchema", _
       .doc(
         """ When converting to a catalog Parquet table, whether to use the catalog schema as the
           | source of truth.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_CONVERT_PARTITION_VALUES_IGNORE_CAST_FAILURE =
-    buildConf("convert.partitionValues.ignoreCastFailure")
+     getOrBuild("convert.partitionValues.ignoreCastFailure", _
       .doc(
         """ When converting to Delta, ignore the failure when casting a partition value to
         | the specified data type, in which case the partition column will be filled with null.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_CONVERT_ICEBERG_USE_NATIVE_PARTITION_VALUES =
-    buildConf("convert.iceberg.useNativePartitionValues")
+     getOrBuild("convert.iceberg.useNativePartitionValues", _
       .doc(
         """ When enabled, obtain the partition values from Iceberg table's metadata, instead
           | of inferring from file paths.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_SNAPSHOT_PARTITIONS =
-    buildConf("snapshotPartitions")
+     getOrBuild("snapshotPartitions", _
       .internal()
       .doc("Number of partitions to use when building a Delta Lake snapshot.")
       .intConf
       .checkValue(n => n > 0, "Delta snapshot partition number must be positive.")
-      .createOptional
+      .createOptional)
 
   val DELTA_SNAPSHOT_LOADING_MAX_RETRIES =
-    buildConf("snapshotLoading.maxRetries")
+     getOrBuild("snapshotLoading.maxRetries", _
       .internal()
       .doc("How many times to retry when failing to load a snapshot. Each retry will try to use " +
         "a different checkpoint in order to skip potential corrupt checkpoints.")
       .intConf
       .checkValue(n => n >= 0, "must not be negative.")
-      .createWithDefault(2)
+      .createWithDefault(2))
 
   val DELTA_SNAPSHOT_CACHE_STORAGE_LEVEL =
-    buildConf("snapshotCache.storageLevel")
+     getOrBuild("snapshotCache.storageLevel", _
       .internal()
       .doc("StorageLevel to use for caching the DeltaLog Snapshot. In general, this should not " +
         "be used unless you are pretty sure that caching has a negative impact.")
       .stringConf
-      .createWithDefault("MEMORY_AND_DISK_SER")
+      .createWithDefault("MEMORY_AND_DISK_SER"))
 
   val DELTA_PARTITION_COLUMN_CHECK_ENABLED =
-    buildConf("partitionColumnValidity.enabled")
+     getOrBuild("partitionColumnValidity.enabled", _
       .internal()
       .doc("Whether to check whether the partition column names have valid names, just like " +
         "the data columns.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_STATE_RECONSTRUCTION_VALIDATION_ENABLED =
-    buildConf("stateReconstructionValidation.enabled")
+     getOrBuild("stateReconstructionValidation.enabled", _
       .internal()
       .doc("Whether to perform validation checks on the reconstructed state.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_COMMIT_VALIDATION_ENABLED =
-    buildConf("commitValidation.enabled")
+     getOrBuild("commitValidation.enabled", _
       .internal()
       .doc("Whether to perform validation checks before commit or not.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_SCHEMA_ON_READ_CHECK_ENABLED =
-    buildConf("checkLatestSchemaOnRead")
+     getOrBuild("checkLatestSchemaOnRead", _
       .doc("In Delta, we always try to give users the latest version of their data without " +
         "having to call REFRESH TABLE or redefine their DataFrames when used in the context of " +
         "streaming. There is a possibility that the schema of the latest version of the table " +
@@ -167,10 +172,10 @@ trait DeltaSQLConfBase {
         "enables a check that ensures that users won't read corrupt data if the source schema " +
         "changes in an incompatible way.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
     val DELTA_ALLOW_CREATE_EMPTY_SCHEMA_TABLE =
-    buildConf("createEmptySchemaTable.enabled")
+      getOrBuild("createEmptySchemaTable.enabled", _
       .internal()
       .doc(
         s"""If enabled, creating a Delta table with an empty schema will be allowed through SQL API
@@ -182,31 +187,31 @@ trait DeltaSQLConfBase {
            |Reading the empty schema table using DataframeReader or `SELECT` is not allowed.
            |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_IMPORT_BATCH_SIZE_STATS_COLLECTION =
-    buildConf("import.batchSize.statsCollection")
+     getOrBuild("import.batchSize.statsCollection", _
       .internal()
       .doc("The number of files per batch for stats collection during import.")
       .intConf
-      .createWithDefault(50000)
+      .createWithDefault(50000))
 
   val DELTA_IMPORT_BATCH_SIZE_SCHEMA_INFERENCE =
-    buildConf("import.batchSize.schemaInference")
+     getOrBuild("import.batchSize.schemaInference", _
       .internal()
       .doc("The number of files per batch for schema inference during import.")
       .intConf
-      .createWithDefault(1000000)
+      .createWithDefault(1000000))
 
   val DELTA_SAMPLE_ESTIMATOR_ENABLED =
-    buildConf("sampling.enabled")
+     getOrBuild("sampling.enabled", _
       .internal()
       .doc("Enable sample based estimation.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_CONVERT_METADATA_CHECK_ENABLED =
-    buildConf("convert.metadataCheck.enabled")
+     getOrBuild("convert.metadataCheck.enabled", _
       .doc(
         """
           |If enabled, during convert to delta, if there is a difference between the catalog table's
@@ -214,139 +219,139 @@ trait DeltaSQLConfBase {
           |the two configurations with the same semantics as update and merge.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_STATS_SKIPPING =
-    buildConf("stats.skipping")
+     getOrBuild("stats.skipping", _
       .internal()
       .doc("When true, statistics are used for skipping")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_LIMIT_PUSHDOWN_ENABLED =
-    buildConf("stats.limitPushdown.enabled")
+     getOrBuild("stats.limitPushdown.enabled", _
       .internal()
       .doc("If true, use the limit clause and file statistics to prune files before " +
         "they are collected to the driver. ")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_SNAPSHOT_ISOLATION =
-    buildConf("snapshotIsolation.enabled")
+     getOrBuild("snapshotIsolation.enabled", _
       .internal()
       .doc("Controls whether queries on Delta tables are guaranteed to have " +
         "snapshot isolation.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_MAX_RETRY_COMMIT_ATTEMPTS =
-    buildConf("maxCommitAttempts")
+     getOrBuild("maxCommitAttempts", _
       .internal()
       .doc("The maximum number of commit attempts we will try for a single commit before failing")
       .intConf
       .checkValue(_ >= 0, "maxCommitAttempts has to be positive")
-      .createWithDefault(10000000)
+      .createWithDefault(10000000))
 
   val DELTA_PROTOCOL_DEFAULT_WRITER_VERSION =
-    buildConf("properties.defaults.minWriterVersion")
+     getOrBuild("properties.defaults.minWriterVersion", _
       .doc("The default writer protocol version to create new tables with, unless a feature " +
         "that requires a higher version for correctness is enabled.")
       .intConf
       .checkValues(Set(1, 2, 3, 4, 5, 6))
-      .createWithDefault(2)
+      .createWithDefault(2))
 
   val DELTA_PROTOCOL_DEFAULT_READER_VERSION =
-    buildConf("properties.defaults.minReaderVersion")
+     getOrBuild("properties.defaults.minReaderVersion", _
       .doc("The default reader protocol version to create new tables with, unless a feature " +
         "that requires a higher version for correctness is enabled.")
       .intConf
       .checkValues(Set(1, 2))
-      .createWithDefault(1)
+      .createWithDefault(1))
 
   val DELTA_MAX_SNAPSHOT_LINEAGE_LENGTH =
-    buildConf("maxSnapshotLineageLength")
+     getOrBuild("maxSnapshotLineageLength", _
       .internal()
       .doc("The max lineage length of a Snapshot before Delta forces to build a Snapshot from " +
         "scratch.")
       .intConf
       .checkValue(_ > 0, "maxSnapshotLineageLength must be positive.")
-      .createWithDefault(50)
+      .createWithDefault(50))
 
   val DELTA_HISTORY_PAR_SEARCH_THRESHOLD =
-    buildConf("history.maxKeysPerList")
+     getOrBuild("history.maxKeysPerList", _
       .internal()
       .doc("How many commits to list when performing a parallel search. Currently set to 1000, " +
         "which is the maximum keys returned by S3 per list call. Azure can return 5000, " +
         "therefore we choose 1000.")
       .intConf
-      .createWithDefault(1000)
+      .createWithDefault(1000))
 
   val DELTA_HISTORY_METRICS_ENABLED =
-    buildConf("history.metricsEnabled")
+     getOrBuild("history.metricsEnabled", _
       .doc("Enables Metrics reporting in Describe History. CommitInfo will now record the " +
         "Operation Metrics.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_VACUUM_RETENTION_CHECK_ENABLED =
-    buildConf("retentionDurationCheck.enabled")
+     getOrBuild("retentionDurationCheck.enabled", _
       .doc("Adds a check preventing users from running vacuum with a very short retention " +
         "period, which may end up corrupting the Delta Log.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_VACUUM_PARALLEL_DELETE_ENABLED =
-    buildConf("vacuum.parallelDelete.enabled")
+     getOrBuild("vacuum.parallelDelete.enabled", _
       .doc("Enables parallelizing the deletion of files during a vacuum command. Enabling " +
         "may result hitting rate limits on some storage backends. When enabled, parallelization " +
         "is controlled 'spark.databricks.delta.vacuum.parallelDelete.parallelism'.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_VACUUM_PARALLEL_DELETE_PARALLELISM =
-    buildConf("vacuum.parallelDelete.parallelism")
+     getOrBuild("vacuum.parallelDelete.parallelism", _
       .doc("Sets the number of partitions to use for parallel deletes. If not set, defaults to " +
         "spark.sql.shuffle.partitions.")
       .intConf
       .checkValue(_ > 0, "parallelDelete.parallelism must be positive")
-      .createOptional
+      .createOptional)
 
   val DELTA_SCHEMA_AUTO_MIGRATE =
-    buildConf("schema.autoMerge.enabled")
+     getOrBuild("schema.autoMerge.enabled", _
       .doc("If true, enables schema merging on appends and on overwrites.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_SCHEMA_TYPE_CHECK =
-    buildConf("schema.typeCheck.enabled")
+    getOrBuild("schema.typeCheck.enabled", _
       .doc(
         """Enable the data type check when updating the table schema. Disabling this flag may
           | allow users to create unsupported Delta tables and should only be used when trying to
           | read/write legacy tables.""".stripMargin)
       .internal()
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_ASSUMES_DROP_CONSTRAINT_IF_EXISTS =
-    buildConf("constraints.assumesDropIfExists.enabled")
+    getOrBuild("constraints.assumesDropIfExists.enabled", _
       .doc("""If true, DROP CONSTRAINT quietly drops nonexistent constraints even without
              |IF EXISTS.
            """)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_STATE_CORRUPTION_IS_FATAL =
-    buildConf("state.corruptionIsFatal")
+     getOrBuild("state.corruptionIsFatal", _
       .internal()
       .doc(
         """If true, throws a fatal error when the recreated Delta State doesn't
           |match committed checksum file.
         """)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_ASYNC_UPDATE_STALENESS_TIME_LIMIT =
-    buildConf("stalenessLimit")
+     getOrBuild("stalenessLimit", _
       .doc(
         """Setting a non-zero time limit will allow you to query the last loaded state of the Delta
           |table without blocking on a table update. You can use this configuration to reduce the
@@ -357,32 +362,32 @@ trait DeltaSQLConfBase {
         """.stripMargin)
       .timeConf(TimeUnit.MILLISECONDS)
       .checkValue(_ >= 0, "Staleness limit cannot be negative")
-      .createWithDefault(0L) // Don't let tables go stale
+      .createWithDefault(0L)) // Don't let tables go stale
 
   val DELTA_ALTER_LOCATION_BYPASS_SCHEMA_CHECK =
-    buildConf("alterLocation.bypassSchemaCheck")
+     getOrBuild("alterLocation.bypassSchemaCheck", _
       .doc("If true, Alter Table Set Location on Delta will go through even if the Delta table " +
         "in the new location has a different schema from the original Delta table.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DUMMY_FILE_MANAGER_NUM_OF_FILES =
-    buildConf("dummyFileManager.numOfFiles")
+     getOrBuild("dummyFileManager.numOfFiles", _
       .internal()
       .doc("How many dummy files to write in DummyFileManager")
       .intConf
       .checkValue(_ >= 0, "numOfFiles can not be negative.")
-      .createWithDefault(3)
+      .createWithDefault(3))
 
   val DUMMY_FILE_MANAGER_PREFIX =
-    buildConf("dummyFileManager.prefix")
+     getOrBuild("dummyFileManager.prefix", _
       .internal()
       .doc("The file prefix to use in DummyFileManager")
       .stringConf
-      .createWithDefault(".s3-optimization-")
+      .createWithDefault(".s3-optimization-"))
 
   val MERGE_INSERT_ONLY_ENABLED =
-    buildConf("merge.optimizeInsertOnlyMerge.enabled")
+     getOrBuild("merge.optimizeInsertOnlyMerge.enabled", _
       .internal()
       .doc(
         """
@@ -390,10 +395,10 @@ trait DeltaSQLConfBase {
           |by avoiding rewriting old files and just inserting new files.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val MERGE_REPARTITION_BEFORE_WRITE =
-    buildConf("merge.repartitionBeforeWrite.enabled")
+     getOrBuild("merge.repartitionBeforeWrite.enabled", _
       .internal()
       .doc(
         """
@@ -401,20 +406,20 @@ trait DeltaSQLConfBase {
           |writing the files.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val MERGE_MATCHED_ONLY_ENABLED =
-    buildConf("merge.optimizeMatchedOnlyMerge.enabled")
+     getOrBuild("merge.optimizeMatchedOnlyMerge.enabled", _
       .internal()
       .doc(
         """If enabled, merge without 'when not matched' clause will be optimized to use a
           |right outer join instead of a full outer join.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val MERGE_SKIP_OSS_RESOLUTION_WITH_STAR =
-    buildConf("merge.skipOssResolutionWithStar")
+     getOrBuild("merge.skipOssResolutionWithStar", _
       .internal()
       .doc(
         """
@@ -423,10 +428,10 @@ trait DeltaSQLConfBase {
           |bug with star and temp views. See SC-72276 for details.
         """.stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val MERGE_FAIL_IF_SOURCE_CHANGED =
-    buildConf("merge.failIfSourceChanged")
+     getOrBuild("merge.failIfSourceChanged", _
       .internal()
       .doc(
         """
@@ -435,90 +440,90 @@ trait DeltaSQLConfBase {
           |query plans. The detection is best-effort.
       """.stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_LAST_COMMIT_VERSION_IN_SESSION =
-    buildConf("lastCommitVersionInSession")
+     getOrBuild("lastCommitVersionInSession", _
       .doc("The version of the last commit made in the SparkSession for any table.")
       .longConf
       .checkValue(_ >= 0, "the version must be >= 0")
-      .createOptional
+      .createOptional)
 
   val ALLOW_UNENFORCED_NOT_NULL_CONSTRAINTS =
-    buildConf("constraints.allowUnenforcedNotNull.enabled")
+     getOrBuild("constraints.allowUnenforcedNotNull.enabled", _
       .internal()
       .doc("If enabled, NOT NULL constraints within array and map types will be permitted in " +
         "Delta table creation, even though Delta can't enforce them.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_CHECKPOINT_V2_ENABLED =
-    buildConf("checkpointV2.enabled")
+     getOrBuild("checkpointV2.enabled", _
       .internal()
       .doc("Write checkpoints where the partition values are parsed according to the data type.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val CHECKPOINT_SCHEMA_WRITE_THRESHOLD_LENGTH =
-    buildConf("checkpointSchema.writeThresholdLength")
+    getOrBuild("checkpointSchema.writeThresholdLength", _
       .internal()
       .doc("Checkpoint schema larger than this threshold won't be written to the last checkpoint" +
         " file")
       .intConf
-      .createWithDefault(20000)
+      .createWithDefault(20000))
 
   val LAST_CHECKPOINT_CHECKSUM_ENABLED =
-    buildConf("lastCheckpoint.checksum.enabled")
+    getOrBuild("lastCheckpoint.checksum.enabled", _
       .internal()
       .doc("Controls whether to write the checksum while writing the LAST_CHECKPOINT file and" +
         " whether to validate it while reading the LAST_CHECKPOINT file")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_CHECKPOINT_PART_SIZE =
-    buildConf("checkpoint.partSize")
+    getOrBuild("checkpoint.partSize", _
         .internal()
         .doc("The limit at which we will start parallelizing the checkpoint. We will attempt to " +
                  "write a maximum of this many actions per checkpoint file.")
         .longConf
         .checkValue(_ > 0, "partSize has to be positive")
-        .createOptional
+        .createOptional)
 
   val DELTA_WRITE_CHECKSUM_ENABLED =
-    buildConf("writeChecksumFile.enabled")
+     getOrBuild("writeChecksumFile.enabled", _
       .doc("Whether the checksum file can be written.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_CHECKPOINT_THROW_EXCEPTION_WHEN_FAILED =
-      buildConf("checkpoint.exceptionThrowing.enabled")
+       getOrBuild("checkpoint.exceptionThrowing.enabled", _
         .internal()
       .doc("Throw an error if checkpoint is failed. This flag is intentionally used for " +
           "testing purpose to catch the checkpoint issues proactively. In production, we " +
           "should not set this flag to be true because successful commit should return " +
           "success to client regardless of the checkpoint result without throwing.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_RESOLVE_MERGE_UPDATE_STRUCTS_BY_NAME =
-    buildConf("resolveMergeUpdateStructsByName.enabled")
+     getOrBuild("resolveMergeUpdateStructsByName.enabled", _
       .internal()
       .doc("Whether to resolve structs by name in UPDATE operations of UPDATE and MERGE INTO " +
         "commands. If disabled, Delta will revert to the legacy behavior of resolving by position.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_TIME_TRAVEL_STRICT_TIMESTAMP_PARSING =
-    buildConf("timeTravel.parsing.strict")
+     getOrBuild("timeTravel.parsing.strict", _
       .internal()
       .doc("Whether to require time travel timestamps to parse to a valid timestamp. If " +
         "disabled, Delta will revert to the legacy behavior of treating invalid timestamps as " +
         "equivalent to unix time 0 (1970-01-01 00:00:00).")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_STRICT_CHECK_DELTA_TABLE =
-    buildConf("isDeltaTable.strictCheck")
+     getOrBuild("isDeltaTable.strictCheck", _
       .internal()
       .doc("""
            | When enabled, io.delta.tables.DeltaTable.isDeltaTable
@@ -526,10 +531,10 @@ trait DeltaSQLConfBase {
            | contain any transaction logs.
            |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_LEGACY_STORE_WRITER_OPTIONS_AS_PROPS =
-    buildConf("legacy.storeOptionsAsProperties")
+     getOrBuild("legacy.storeOptionsAsProperties", _
       .internal()
       .doc("""
              |Delta was unintentionally storing options provided by the DataFrameWriter in the
@@ -540,10 +545,10 @@ trait DeltaSQLConfBase {
              |table options.
              |""".stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_VACUUM_RELATIVIZE_IGNORE_ERROR =
-    buildConf("vacuum.relativize.ignoreError")
+     getOrBuild("vacuum.relativize.ignoreError", _
       .internal()
       .doc("""
              |When enabled, the error when trying to relativize an absolute path when
@@ -553,9 +558,9 @@ trait DeltaSQLConfBase {
              |with production datasets.
              |""".stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
   val DELTA_LEGACY_ALLOW_AMBIGUOUS_PATHS =
-    buildConf("legacy.allowAmbiguousPathsInCreateTable")
+     getOrBuild("legacy.allowAmbiguousPathsInCreateTable", _
       .internal()
       .doc("""
              |Delta was unintentionally allowing CREATE TABLE queries with both 'delta.`path`'
@@ -564,20 +569,20 @@ trait DeltaSQLConfBase {
              |true and there are two paths in CREATE TABLE, the LOCATION path clause will be
              |ignored like what the old version does.""".stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val REPLACEWHERE_DATACOLUMNS_ENABLED =
-    buildConf("replaceWhere.dataColumns.enabled")
+     getOrBuild("replaceWhere.dataColumns.enabled", _
       .doc(
         """
           |When enabled, replaceWhere on arbitrary expression and arbitrary columns is enabled.
           |If disabled, it falls back to the old behavior
           |to replace on partition columns only.""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val REPLACEWHERE_METRICS_ENABLED =
-    buildConf("replaceWhere.dataColumns.metrics.enabled")
+    getOrBuild("replaceWhere.dataColumns.metrics.enabled", _
       .internal()
       .doc(
         """
@@ -585,10 +590,10 @@ trait DeltaSQLConfBase {
           |arbitrary columns is enabled. This will not report row level metrics for partitioned
           |tables and tables with no stats.""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val REPLACEWHERE_CONSTRAINT_CHECK_ENABLED =
-    buildConf("replaceWhere.constraintCheck.enabled")
+     getOrBuild("replaceWhere.constraintCheck.enabled", _
       .doc(
         """
           |When enabled, replaceWhere on arbitrary expression and arbitrary columns will
@@ -597,20 +602,20 @@ trait DeltaSQLConfBase {
           |If disabled, it will skip the constraint check and replace with all the rows
           |from the new dataframe.""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val REPLACEWHERE_DATACOLUMNS_WITH_CDF_ENABLED =
-    buildConf("replaceWhere.dataColumnsWithCDF.enabled")
+    getOrBuild("replaceWhere.dataColumnsWithCDF.enabled", _
       .internal()
       .doc(
         """
           |When enabled, replaceWhere on arbitrary expression and arbitrary columns will produce
           |results for CDF. If disabled, it will fall back to the old behavior.""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val LOG_SIZE_IN_MEMORY_THRESHOLD =
-    buildConf("streaming.logSizeInMemoryThreshold")
+     getOrBuild("streaming.logSizeInMemoryThreshold", _
       .internal()
       .doc(
         """
@@ -618,20 +623,20 @@ trait DeltaSQLConfBase {
           |than this, we will read the log file in multiple passes rather than loading it into
           |the memory entirely.""".stripMargin)
       .longConf
-      .createWithDefault(128L * 1024 * 1024) // 128MB
+      .createWithDefault(128L * 1024 * 1024)) // 128MB
 
   val LOAD_FILE_SYSTEM_CONFIGS_FROM_DATAFRAME_OPTIONS =
-    buildConf("loadFileSystemConfigsFromDataFrameOptions")
+     getOrBuild("loadFileSystemConfigsFromDataFrameOptions", _
       .internal()
       .doc(
         """Whether to load file systems configs provided in DataFrameReader/Writer options when
           |calling `DataFrameReader.load/DataFrameWriter.save` using a Delta table path.
           |`DataFrameReader.table/DataFrameWriter.saveAsTable` doesn't support this.""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val CONVERT_EMPTY_TO_NULL_FOR_STRING_PARTITION_COL =
-    buildConf("convertEmptyToNullForStringPartitionCol")
+     getOrBuild("convertEmptyToNullForStringPartitionCol", _
       .internal()
       .doc(
         """
@@ -639,7 +644,7 @@ trait DeltaSQLConfBase {
           |constraint checks.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   /**
    * The below confs have a special prefix `spark.databricks.io` because this is the conf value
@@ -648,74 +653,86 @@ trait DeltaSQLConfBase {
    * values for the same data skipping parameter.
    */
   val DATA_SKIPPING_STRING_PREFIX_LENGTH =
-    SQLConf.buildConf("spark.databricks.io.skipping.stringPrefixLength")
-      .internal()
-      .doc("For string columns, how long prefix to store in the data skipping index.")
-      .intConf
-      .createWithDefault(32)
+    Option(ConfigEntry
+      .findEntry("spark.databricks.io.skipping.stringPrefixLength")
+      .asInstanceOf[ConfigEntry[Int]]
+    ).getOrElse(
+      SQLConf.buildConf("spark.databricks.io.skipping.stringPrefixLength")
+        .internal()
+        .doc("For string columns, how long prefix to store in the data skipping index.")
+        .intConf
+        .createWithDefault(32))
 
   val MDC_NUM_RANGE_IDS =
+    Option(ConfigEntry
+      .findEntry("spark.databricks.io.skipping.mdc.rangeId.max")
+      .asInstanceOf[ConfigEntry[Int]]
+    ).getOrElse(
     SQLConf.buildConf("spark.databricks.io.skipping.mdc.rangeId.max")
       .internal()
       .doc("This controls the domain of rangeId values to be interleaved. The bigger, the better " +
          "granularity, but at the expense of performance (more data gets sampled).")
       .intConf
       .checkValue(_ > 1, "'spark.databricks.io.skipping.mdc.rangeId.max' must be greater than 1")
-      .createWithDefault(1000)
+      .createWithDefault(1000))
 
   val MDC_ADD_NOISE =
+    Option(ConfigEntry
+      .findEntry("spark.databricks.io.skipping.mdc.addNoise")
+      .asInstanceOf[ConfigEntry[Boolean]]
+    ).getOrElse(
     SQLConf.buildConf("spark.databricks.io.skipping.mdc.addNoise")
       .internal()
       .doc("Whether or not a random byte should be added as a suffix to the interleaved bits " +
          "when computing the Z-order values for MDC. This can help deal with skew, but may " +
          "have a negative impact on overall min/max skipping effectiveness.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_OPTIMIZE_ZORDER_COL_STAT_CHECK =
-    buildConf("optimize.zorder.checkStatsCollection.enabled")
+    getOrBuild("optimize.zorder.checkStatsCollection.enabled", _
       .internal()
       .doc(s"When enabled, we will check if the column we're actually collecting stats " +
         "on the columns we are z-ordering on.")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val FAST_INTERLEAVE_BITS_ENABLED =
-    buildConf("optimize.zorder.fastInterleaveBits.enabled")
+    getOrBuild("optimize.zorder.fastInterleaveBits.enabled", _
       .internal()
       .doc("When true, a faster version of the bit interleaving algorithm is used.")
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val INTERNAL_UDF_OPTIMIZATION_ENABLED =
-    buildConf("internalUdfOptimization.enabled")
+     getOrBuild("internalUdfOptimization.enabled", _
       .internal()
       .doc(
         """If true, create udfs used by Delta internally from templates to reduce lock contention
           |caused by Scala Reflection.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val GENERATED_COLUMN_PARTITION_FILTER_OPTIMIZATION_ENABLED =
-    buildConf("generatedColumn.partitionFilterOptimization.enabled")
+     getOrBuild("generatedColumn.partitionFilterOptimization.enabled", _
       .internal()
       .doc(
       "Whether to extract partition filters automatically from data filters for a partition" +
         " generated column if possible")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val GENERATED_COLUMN_ALLOW_NULLABLE =
-    buildConf("generatedColumn.allowNullableIngest.enabled")
+    getOrBuild("generatedColumn.allowNullableIngest.enabled", _
       .internal()
       .doc("When enabled this will allow tables with generated columns enabled to be able " +
         "to write data without providing values for a nullable column via DataFrame.write")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_OPTIMIZE_MIN_FILE_SIZE =
-    buildConf("optimize.minFileSize")
+     getOrBuild("optimize.minFileSize", _
         .internal()
         .doc(
           """Files which are smaller than this threshold (in bytes) will be grouped together
@@ -723,18 +740,18 @@ trait DeltaSQLConfBase {
              |""".stripMargin)
         .longConf
         .checkValue(_ >= 0, "minFileSize has to be positive")
-        .createWithDefault(1024 * 1024 * 1024)
+        .createWithDefault(1024 * 1024 * 1024))
 
   val DELTA_OPTIMIZE_MAX_FILE_SIZE =
-    buildConf("optimize.maxFileSize")
+     getOrBuild("optimize.maxFileSize", _
         .internal()
         .doc("Target file size produced by the OPTIMIZE command.")
         .longConf
         .checkValue(_ >= 0, "maxFileSize has to be positive")
-        .createWithDefault(1024 * 1024 * 1024)
+        .createWithDefault(1024 * 1024 * 1024))
 
   val DELTA_OPTIMIZE_MAX_THREADS =
-    buildConf("optimize.maxThreads")
+     getOrBuild("optimize.maxThreads", _
         .internal()
         .doc(
           """
@@ -744,10 +761,10 @@ trait DeltaSQLConfBase {
             |""".stripMargin)
         .intConf
         .checkValue(_ > 0, "'optimize.maxThreads' must be positive.")
-        .createWithDefault(15)
+        .createWithDefault(15))
 
   val DELTA_OPTIMIZE_REPARTITION_ENABLED =
-    buildConf("optimize.repartition.enabled")
+    getOrBuild("optimize.repartition.enabled", _
       .internal()
       .doc("Use repartition(1) instead of coalesce(1) to merge small files. " +
         "coalesce(1) is executed with only one task, if there are many tiny files " +
@@ -755,10 +772,10 @@ trait DeltaSQLConfBase {
         "repartition(1) incurs a shuffle stage, but the job can be distributed."
       )
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DELTA_ALTER_TABLE_CHANGE_COLUMN_CHECK_EXPRESSIONS =
-    buildConf("alterTable.changeColumn.checkExpressions")
+     getOrBuild("alterTable.changeColumn.checkExpressions", _
       .internal()
       .doc(
         """
@@ -770,31 +787,31 @@ trait DeltaSQLConfBase {
           |expression checking logic that prevents a valid column change from going through.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_ALTER_TABLE_DROP_COLUMN_ENABLED =
-    buildConf("alterTable.dropColumn.enabled")
+    getOrBuild("alterTable.dropColumn.enabled", _
       .internal()
       .doc(
         """Whether to enable the drop column feature for Delta.
           |This is a safety switch - we should only turn this off when there is an issue.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val DELTA_CDF_ALLOW_OUT_OF_RANGE_TIMESTAMP = {
-    buildConf("changeDataFeed.timestampOutOfRange.enabled")
+    getOrBuild("changeDataFeed.timestampOutOfRange.enabled", _
       .doc(
         """When enabled, Change Data Feed queries with starting and ending timestamps
            | exceeding the newest delta commit timestamp will not error out. For starting timestamp
            | out of range we will return an empty DataFrame, for ending timestamps out of range we
            | will consider the latest Delta version as the ending version.""".stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
   }
 
   val DELTA_CDF_UNSAFE_BATCH_READ_ON_INCOMPATIBLE_SCHEMA_CHANGES =
-    buildConf("changeDataFeed.unsafeBatchReadOnIncompatibleSchemaChanges.enabled")
+    getOrBuild("changeDataFeed.unsafeBatchReadOnIncompatibleSchemaChanges.enabled", _
       .doc(
         "Reading change data in batch (e.g. using `table_changes()`) on Delta table with " +
           "column mapping schema operations is currently blocked due to potential data loss and " +
@@ -802,19 +819,19 @@ trait DeltaSQLConfBase {
           "if they'd like to take the risk.")
       .internal()
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val DYNAMIC_PARTITION_OVERWRITE_ENABLED =
-    buildConf("dynamicPartitionOverwrite.enabled")
+    getOrBuild("dynamicPartitionOverwrite.enabled", _
       .doc("Whether to overwrite partitions dynamically when 'partitionOverwriteMode' is set to " +
         "'dynamic' in either the SQL conf, or a DataFrameWriter option. When this is disabled " +
         "'partitionOverwriteMode' will be ignored.")
       .internal()
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(true))
 
   val ALLOW_ARBITRARY_TABLE_PROPERTIES =
-    buildConf("allowArbitraryProperties.enabled")
+    getOrBuild("allowArbitraryProperties.enabled", _
       .doc(
       """Whether we allow arbitrary Delta table properties. When this is enabled, table properties
           |with the prefix 'delta.' are not checked for validity. Table property validity is based
@@ -827,10 +844,10 @@ trait DeltaSQLConfBase {
       )
       .internal()
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 
   val TABLE_BUILDER_FORCE_TABLEPROPERTY_LOWERCASE =
-    buildConf("deltaTableBuilder.forceTablePropertyLowerCase.enabled")
+    getOrBuild("deltaTableBuilder.forceTablePropertyLowerCase.enabled", _
       .internal()
       .doc(
         """Whether the keys of table properties should be set to lower case.
@@ -840,7 +857,7 @@ trait DeltaSQLConfBase {
           | key will be used for non delta prefix table properties.
           |""".stripMargin)
       .booleanConf
-      .createWithDefault(false)
+      .createWithDefault(false))
 }
 
 object DeltaSQLConf extends DeltaSQLConfBase

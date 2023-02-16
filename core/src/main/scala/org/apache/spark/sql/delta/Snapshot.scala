@@ -38,7 +38,7 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.util.{SerializableConfiguration, Utils}
+import org.apache.spark.util.SerializableConfiguration
 
 /**
  * An immutable snapshot of the state of the log at some delta version. Internally
@@ -158,8 +158,18 @@ class Snapshot(
     }
   }
 
-  def redactedPath: String =
-    Utils.redact(spark.sessionState.conf.stringRedactionPattern, path.toUri.toString)
+  def redactedPath: String = {
+    val text = path.toUri.toString
+    spark.sessionState.conf.stringRedactionPattern match {
+      case None => text
+      case Some(r) =>
+        if (text == null || text.isEmpty) {
+          text
+        } else {
+          r.replaceAllIn(text, "*********(redacted)")
+        }
+    }
+  }
 
   private lazy val cachedState = withDmqTag {
     cacheDS(stateReconstruction, s"Delta Table State #$version - $redactedPath")
